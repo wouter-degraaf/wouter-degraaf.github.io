@@ -4,7 +4,7 @@
 
 .u-section-1 .u-text-1 {
   width: 740px;
-  margin: 22px auto 38px;
+  margin: 21px auto 60px;
 }
 
 @media (max-width: 991px) {
@@ -30,7 +30,7 @@
     margin-right: 0;
   }
 }.u-section-2 .u-sheet-1 {
-  min-height: 1161px;
+  min-height: 1957px;
 }
 
 .u-section-2 .u-custom-html-1 {
@@ -40,11 +40,30 @@
   margin: 0 auto;
 }
 
+.u-section-2 .u-text-1 {
+  margin: 20px auto 0;
+}
+
 .u-section-2 .u-custom-html-2 {
   height: auto;
   min-height: 540px;
   width: 960px;
-  margin: 41px auto;
+  margin: 60px auto 0;
+}
+
+.u-section-2 .u-text-2 {
+  margin: 20px auto 0;
+}
+
+.u-section-2 .u-custom-html-3 {
+  height: auto;
+  min-height: 540px;
+  width: 960px;
+  margin: 60px auto 0;
+}
+
+.u-section-2 .u-text-3 {
+  margin: 30px auto 60px;
 }
 
 @media (max-width: 1199px) {
@@ -55,48 +74,50 @@
   .u-section-2 .u-custom-html-2 {
     width: 940px;
   }
+
+  .u-section-2 .u-custom-html-3 {
+    width: 940px;
+  }
 }
 
 @media (max-width: 991px) {
-  .u-section-2 .u-sheet-1 {
-    min-height: 870px;
-  }
-
   .u-section-2 .u-custom-html-1 {
-    min-height: 405px;
-    margin-right: initial;
-    margin-left: initial;
-    width: auto;
+    width: 720px;
   }
 
   .u-section-2 .u-custom-html-2 {
-    min-height: 405px;
-    margin-top: 30px;
-    margin-bottom: 30px;
-    margin-right: initial;
-    margin-left: initial;
-    width: auto;
+    width: 720px;
+  }
+
+  .u-section-2 .u-custom-html-3 {
+    width: 720px;
+  }
+}
+
+@media (max-width: 767px) {
+  .u-section-2 .u-custom-html-1 {
+    width: 540px;
+  }
+
+  .u-section-2 .u-custom-html-2 {
+    width: 540px;
+  }
+
+  .u-section-2 .u-custom-html-3 {
+    width: 540px;
   }
 }
 
 @media (max-width: 575px) {
-  .u-section-2 .u-sheet-1 {
-    min-height: 426px;
-  }
-
   .u-section-2 .u-custom-html-1 {
-    min-height: 193px;
-    width: auto;
-    margin-right: initial;
-    margin-left: initial;
+    width: 340px;
   }
 
   .u-section-2 .u-custom-html-2 {
-    min-height: 192px;
-    margin-top: 21px;
-    margin-bottom: 21px;
-    width: auto;
-    margin-right: initial;
-    margin-left: initial;
+    width: 340px;
+  }
+
+  .u-section-2 .u-custom-html-3 {
+    width: 340px;
   }
 }
