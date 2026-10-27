@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>Super Poppetje Runner - Shield Respawn Edition</title>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: #0b0505;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            margin: 0;
+            padding: 8px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            border: 3px solid #00ff00;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4);
+            background-color: #281414;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 750px;
+            max-height: 70vh;
+            aspect-ratio: 750 / 400;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+        .ui-container {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 750px;
+        }
+        .shop-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .shop-grid .full { grid-column: 1 / -1; }
+        .shop-grid .half { grid-column: 2 / 4; }
+        .touch-controls {
+            display: none;
+            width: 100%;
+            max-width: 750px;
+            margin-top: 10px;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .touch-side { display: flex; gap: 10px; }
+        .touch-controls button {
+            width: 78px;
+            height: 78px;
+            border-radius: 50%;
+            font-size: 26px;
+            padding: 0;
+            touch-action: none;
+        }
+        .touch-controls button:active { background-color: #00ff00; color: #000; }
+        @media (pointer: coarse), (hover: none) {
+            .touch-controls { display: flex; }
+            .instructie { display: none; }
+        }
+        button {
+            background-color: #2a1a1a;
+            color: white;
+            border: 2px solid #555;
+            padding: 12px 8px;
+            font-size: 13px;
+            min-height: 44px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+            white-space: normal;
+        }
+        button:hover:not(:disabled) {
+            background-color: #4a2a2a;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #333;
+        }
+        .shop-btn {
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+        .shop-btn:hover:not(:disabled) {
+            background-color: #ffd700;
+            color: #1a0a0a;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+        }
+        .btn-reset {
+            background-color: #113f11;
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+        .btn-reset:hover:not(:disabled) {
+            background-color: #00ff00;
+            color: #000;
+        }
+        .instructie {
+            font-size: 15px;
+            color: #bbb;
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .instructie b {
+            color: #00ff00;
+        }
+        @media (max-width: 600px) {
+            .shop-grid { grid-template-columns: repeat(2, 1fr); }
+            .shop-grid .half { grid-column: 1 / -1; }
+            button { font-size: 12px; }
+            .instructie { font-size: 12px; }
+        }
+        @media (max-height: 500px) and (orientation: landscape) {
+            canvas { max-height: 62vh; }
+            .instructie { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="instructie">⬆️/Spatie = Springen (Inhouden=Hoger) | ⬇️ Bukken | <b>F / Enter = Schieten</b> | <b>P = Pauze</b></div>
+    <canvas id="gameCanvas" width="750" height="400"></canvas>
+    
+    <div class="touch-controls">
+        <div class="touch-side">
+            <button id="tcDuck" aria-label="Bukken">⬇️</button>
+            <button id="tcPause" aria-label="Pauze">⏸️</button>
+        </div>
+        <div class="touch-side">
+            <button id="tcShoot" aria-label="Schieten">🔫</button>
+            <button id="tcJump" aria-label="Springen">⬆️</button>
+        </div>
+    </div>
+
+    <div class="ui-container">
+        <div class="shop-grid">
+            <button class="btn-reset full" onclick="resetGame()">🌱 Herrijzen / Start Nieuw Spel (Enter indien dood)</button>
+            <button id="btnJump" class="shop-btn" onclick="buyUpgrade('jump')" disabled>🚀 Mega Sprong (5k)</button>
+            <button id="btnMagnet" class="shop-btn" onclick="buyUpgrade('magnet')" disabled>🧲 Magneet (7.5k)</button>
+            <button id="btnShoot" class="shop-btn" onclick="buyUpgrade('shoot')" disabled>🔫 Altijd Schieten (10k)</button>
+            <button id="btnBackup" class="shop-btn" onclick="buyUpgrade('backup')" disabled>⏳ Level Back-up (12.5k)</button>
+            <button id="btnShield" class="shop-btn half" onclick="buyUpgrade('shield')" disabled>🛡️ Koop Schild 1 (15k)</button>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Scherp tekenen op retina/hi-dpi schermen; logische afmetingen blijven 750x400
+function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = 750 * dpr;
+    canvas.height = 400 * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const btnJump = document.getElementById('btnJump');
+const btnMagnet = document.getElementById('btnMagnet');
+const btnShoot = document.getElementById('btnShoot');
+const btnBackup = document.getElementById('btnBackup');
+const btnShield = document.getElementById('btnShield');
+
+let frame = 0;
+const width = 750;
+const height = 400;
+const groundY = height - 40; 
+
+let playerX = 120;
+let playerY = groundY; 
+let playerWidth = 30;
+let playerHeight = 40;
+let playerStatus = "levend";
+let isCrouching = false;
+let isJumping = false;
+let jumpVelocity = 0;
+
+let isPaused = false;
+let highScore = 0;
+let shootCooldown = 0;
+let touchCrouch = false;
+let currentLevel = 1;
+let score = 0; 
+let savedGold = 0; 
+let lastDiedLevel = 1;
+
+// Upgrades
+let hasHigherJump = false;
+let hasMagnet = false;
+let hasAlwaysShoot = false;
+let hasBackup = false;
+let shieldCount = 0; 
+
+let obstacles = [];
+let coins = [];
+let particles = [];
+let playerProjectiles = [];
+let bossProjectiles = [];
+
+let boss = {
+    active: false,
+    x: width + 100,
+    y: groundY - 120,
+    width: 80,
+    height: 120,
+    hp: 50,
+    maxHp: 50,
+    shootTimer: 0,
+    direction: 1,
+    isSuper: false
+};
+
+let spawnTimer = 0;
+let coinTimer = 0;
+let gameSpeed = 4.5; 
+let keys = {};
+
+// Voortgang bewaren tussen sessies
+const SAVE_KEY = 'poppetjeRunnerSave';
+function saveProgress() {
+    try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+            savedGold, highScore, hasHigherJump, hasMagnet, hasAlwaysShoot, hasBackup, shieldCount
+        }));
+    } catch (e) {}
+}
+function loadProgress() {
+    try {
+        const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+        if (!d) return;
+        savedGold = d.savedGold || 0;
+        highScore = d.highScore || 0;
+        hasHigherJump = !!d.hasHigherJump;
+        hasMagnet = !!d.hasMagnet;
+        hasAlwaysShoot = !!d.hasAlwaysShoot;
+        hasBackup = !!d.hasBackup;
+        shieldCount = Math.min(3, d.shieldCount || 0);
+    } catch (e) {}
+}
+
+function die() {
+    playerStatus = "dood";
+    lastDiedLevel = currentLevel;
+    if (score > highScore) highScore = score;
+    saveProgress();
+    updateShopButtons();
+}
+
+function doJump() {
+    if (playerStatus === "levend" && !isJumping && !isPaused) {
+        isJumping = true;
+        jumpVelocity = hasHigherJump ? -14 : -10.5;
+    }
+}
+
+function doShoot() {
+    if (playerStatus !== "levend" || isPaused || shootCooldown > 0) return;
+    if (hasAlwaysShoot || boss.active) {
+        shootCooldown = 8;
+        playerProjectiles.push({
+            x: playerX + playerWidth,
+            y: isCrouching ? groundY - 10 : playerY - playerHeight / 2,
+            speed: 12
+        });
+    }
+}
+
+function togglePause() {
+    if (playerStatus === "levend") isPaused = !isPaused;
+}
+
+window.addEventListener('keydown', function(e) {
+    const k = e.key.toLowerCase();
+    if (e.key === "ArrowUp" || e.key === " " || e.key === "ArrowDown" || k === "p" || k === "f" || e.key === "Enter") {
+        e.preventDefault();
+    }
+    if (e.repeat) {
+        keys[e.key] = true;
+        if (k === "f" || e.key === "Enter") doShoot();
+        return;
+    }
+    keys[e.key] = true;
+
+    if (e.key === "Enter" && playerStatus === "dood") { resetGame(); return; }
+    if (k === "p") { togglePause(); return; }
+    if (e.key === "ArrowUp" || e.key === " ") doJump();
+    if (k === "f" || e.key === "Enter") doShoot();
+});
+
+window.addEventListener('keyup', function(e) {
+    keys[e.key] = false;
+});
+
+// Automatisch pauzeren als het tabblad/venster de focus verliest
+function autoPause() { if (playerStatus === "levend") isPaused = true; }
+document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
+window.addEventListener('blur', autoPause);
+
+// Touchbediening (pointer events: werkt ook met muis/stylus)
+let shootHold = null;
+function bindHold(id, onDown, onUp) {
+    const el = document.getElementById(id);
+    el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); onDown(); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t =>
+        el.addEventListener(t, () => { if (onUp) onUp(); }));
+}
+bindHold('tcJump', () => { keys[" "] = true; doJump(); }, () => { keys[" "] = false; });
+bindHold('tcDuck', () => { touchCrouch = true; }, () => { touchCrouch = false; });
+bindHold('tcShoot', () => { doShoot(); clearInterval(shootHold); shootHold = setInterval(doShoot, 120); },
+    () => { clearInterval(shootHold); });
+bindHold('tcPause', () => { togglePause(); });
+
+// Tik op het scherm: herrijzen als dood, hervatten als gepauzeerd
+canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (playerStatus === "dood") resetGame();
+    else if (isPaused) isPaused = false;
+});
+
+// Knoppen mogen geen focus houden (anders triggert Spatie ze opnieuw)
+document.querySelectorAll('button').forEach(b => b.addEventListener('click', () => b.blur()));
+
+function buyUpgrade(type) {
+    if (playerStatus !== "dood") return; 
+
+    if (type === 'jump' && savedGold >= 5000 && !hasHigherJump) {
+        savedGold -= 5000;
+        hasHigherJump = true;
+    } else if (type === 'magnet' && savedGold >= 7500 && !hasMagnet) {
+        savedGold -= 7500;
+        hasMagnet = true;
+    } else if (type === 'shoot' && savedGold >= 10000 && !hasAlwaysShoot) {
+        savedGold -= 10000;
+        hasAlwaysShoot = true;
+    } else if (type === 'backup' && savedGold >= 12500 && !hasBackup) {
+        savedGold -= 12500;
+        hasBackup = true;
+    } else if (type === 'shield' && shieldCount < 3) {
+        let cost = 15000 + shieldCount * 2500; 
+        if (savedGold >= cost) {
+            savedGold -= cost;
+            shieldCount++;
+        }
+    }
+    saveProgress();
+    updateShopButtons();
+}
+
+function updateShopButtons() {
+    let canBuy = (playerStatus === "dood");
+
+    btnJump.disabled = (!canBuy || savedGold < 5000 || hasHigherJump);
+    btnJump.innerText = hasHigherJump ? "✨ Actief" : "🚀 Mega Sprong (5k)";
+
+    btnMagnet.disabled = (!canBuy || savedGold < 7500 || hasMagnet);
+    btnMagnet.innerText = hasMagnet ? "✨ Actief" : "🧲 Magneet (7.5k)";
+
+    btnShoot.disabled = (!canBuy || savedGold < 10000 || hasAlwaysShoot);
+    btnShoot.innerText = hasAlwaysShoot ? "✨ Actief" : "🔫 Altijd Schieten (10k)";
+
+    btnBackup.disabled = (!canBuy || savedGold < 12500 || hasBackup);
+    btnBackup.innerText = hasBackup ? "✨ Actief" : "⏳ Level Back-up (12.5k)";
+
+    if (shieldCount >= 3) {
+        btnShield.disabled = true;
+        btnShield.innerText = "🛡️ Schild Maximaal (3/3)";
+    } else {
+        let nextCost = 15000 + shieldCount * 2500;
+        btnShield.disabled = (!canBuy || savedGold < nextCost);
+        btnShield.innerText = `🛡️ Koop Schild ${shieldCount + 1} (${nextCost / 1000}k)`;
+    }
+}
+
+function resetGame() {
+    playerStatus = "levend";
+    isJumping = false;
+    isCrouching = false;
+    isPaused = false;
+    
+    // Zorg ervoor dat gekochte schilden NIET verdwijnen bij reset!
+    // We resetten shieldCount dus niet naar 0, we behouden wat de speler heeft gekocht.
+
+    if (hasBackup && lastDiedLevel > 1) {
+        currentLevel = lastDiedLevel - 1;
+        score = (currentLevel - 1) * 5000;
+    } else {
+        currentLevel = 1;
+        score = 0;
+    }
+
+    playerY = groundY;
+    obstacles = [];
+    coins = [];
+    particles = [];
+    playerProjectiles = [];
+    bossProjectiles = [];
+    gameSpeed = 4.5 + (currentLevel - 1) * 0.4; 
+    spawnTimer = 0;
+    coinTimer = 0;
+
+    boss.active = false;
+    boss.x = width + 100;
+
+    updateShopButtons();
+}
+
+function createParticles(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            radius: Math.random() * 3 + 1,
+            alpha: 1,
+            color: color
+        });
+    }
+}
+
+function update() {
+    if (isPaused || playerStatus === "dood") return;
+
+    frame++;
+    if (shootCooldown > 0) shootCooldown--;
+
+    let targetLevel = Math.floor(score / 5000) + 1;
+    if (targetLevel > 20) targetLevel = 20;
+    if (targetLevel !== currentLevel) {
+        currentLevel = targetLevel;
+        gameSpeed = 4.5 + (currentLevel - 1) * 0.4;
+    }
+
+    if (playerStatus === "levend" && !boss.active) {
+        score += 1;
+    }
+
+    // Baas check: Nu bij elk level aan het EINDE (behalve 10 en 20)
+    // De baas spawnt als de score bijna 5000 bereikt (bijv. op 4200 XP binnen het level)
+    let scoreInCurrentLevel = score % 5000;
+    if (currentLevel !== 10 && currentLevel !== 20 && !boss.active && scoreInCurrentLevel >= 4200 && scoreInCurrentLevel < 4900) {
+        boss.active = true;
+        boss.isSuper = (currentLevel >= 15); // Vanaf level 15 extra sterke bazen
+        boss.maxHp = 40 + (currentLevel * 15); // HP schaalt flink omhoog per level
+        boss.hp = boss.maxHp;
+        boss.x = width + 50;
+        boss.y = groundY - 120;
+    }
+
+    if (keys["ArrowDown"] || touchCrouch) {
+        isCrouching = true;
+        playerHeight = 20;
+    } else {
+        isCrouching = false;
+        playerHeight = 40;
+    }
+
+    if (isJumping) {
+        playerY += jumpVelocity;
+        let gravity = 0.5;
+        if ((keys["ArrowUp"] || keys[" "]) && jumpVelocity < 0) {
+            gravity = 0.25; 
+        }
+        jumpVelocity += gravity;
+
+        if (playerY >= groundY) {
+            playerY = groundY;
+            isJumping = false;
+            jumpVelocity = 0;
+        }
+    }
+
+    if (boss.active) {
+        if (boss.x > width - 150) {
+            boss.x -= 3; // Sneller het scherm in
+        } else {
+            // Moeilijker gemaakt: Bazen bewegen sneller op en neer op basis van level
+            boss.y += boss.direction * (1.8 + currentLevel * 0.1);
+            if (boss.y < groundY - 190 || boss.y > groundY - 90) {
+                boss.direction *= -1;
+            }
+
+            boss.shootTimer++;
+            // Moeilijker gemaakt: Schietfrequentie ligt veel hoger
+            let shootInterval = Math.max(25, 60 - currentLevel * 2);
+            if (boss.shootTimer % shootInterval === 0) {
+                // Snellere kogels en verticale spreiding
+                bossProjectiles.push({
+                    x: boss.x,
+                    y: boss.y + 40,
+                    vx: -8 - (currentLevel * 0.2),
+                    vy: (Math.random() - 0.5) * (boss.isSuper ? 6 : 3) 
+                });
+
+                // Stuurt vaker en snellere roze monsters af
+                if (Math.random() < 0.6) {
+                    obstacles.push({
+                        x: boss.x,
+                        y: groundY - 30,
+                        width: 30,
+                        height: 30,
+                        type: "pink_monster",
+                        hp: 1,
+                        vx: -9 - (currentLevel * 0.2)
+                    });
+                }
+            }
+        }
+    }
+
+    if (!boss.active) {
+        spawnTimer++;
+        if (spawnTimer % Math.max(45, 120 - currentLevel * 4) === 0) {
+            let r = Math.random();
+            if (r < 0.25) {
+                obstacles.push({
+                    x: width, y: groundY - 140, width: 35, height: 30, type: "spleet_boven", hp: 2
+                });
+                obstacles.push({
+                    x: width, y: groundY - 30, width: 35, height: 30, type: "spleet_onder", hp: 2
+                });
+            } else if (r < 0.50) {
+                obstacles.push({
+                    x: width, y: groundY - 30, width: 30, height: 30, type: "purple_monster", hp: 1, jumpTimer: 0
+                });
+            } else if (r < 0.75) {
+                obstacles.push({
+                    x: width, y: groundY - 200, width: 40, height: 40, type: "falling", hp: 2, isFalling: false
+                });
+            } else {
+                obstacles.push({
+                    x: width, y: groundY - 55, width: 30, height: 25, type: "yellow_hoog", hp: 2
+                });
+            }
+        }
+
+        coinTimer++;
+        if (coinTimer % 40 === 0) {
+            let isBlue = Math.random() < 0.15; 
+            coins.push({
+                x: width,
+                y: groundY - 50 - Math.random() * 100,
+                type: isBlue ? "blue" : "gold",
+                radius: 8
+            });
+        }
+    }
+
+    for (let i = playerProjectiles.length - 1; i >= 0; i--) {
+        let p = playerProjectiles[i];
+        p.x += p.speed;
+
+        if (boss.active && p.x > boss.x && p.x < boss.x + boss.width && p.y > boss.y && p.y < boss.y + boss.height) {
+            boss.hp--;
+            createParticles(p.x, p.y, "#ff0000");
+            playerProjectiles.splice(i, 1);
+            if (boss.hp <= 0) {
+                boss.active = false;
+                score += 2500; // Iets hogere XP beloning
+                savedGold += 5000;
+            }
+            continue;
+        }
+
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+            let obs = obstacles[j];
+            let obsY = obs.y;
+            if (p.x > obs.x && p.x < obs.x + obs.width && p.y > obsY && p.y < obsY + obs.height) {
+                obs.hp--;
+                createParticles(p.x, p.y, "#00ffff");
+                playerProjectiles.splice(i, 1);
+                if (obs.hp <= 0) {
+                    createParticles(obs.x + obs.width/2, obsY + obs.height/2, "#ff0055");
+                    obstacles.splice(j, 1);
+                }
+                break;
+            }
+        }
+
+        if (p.x > width) playerProjectiles.splice(i, 1);
+    }
+
+    for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+        let bp = bossProjectiles[i];
+        bp.x += bp.vx;
+        bp.y += bp.vy;
+
+        let pTop = playerY - playerHeight;
+        if (bp.x > playerX && bp.x < playerX + playerWidth && bp.y > pTop && bp.y < playerY) {
+            bossProjectiles.splice(i, 1);
+            if (shieldCount > 0) {
+                shieldCount--;
+                createParticles(playerX + 15, playerY - 20, "#00ffff");
+            } else {
+                die();
+            }
+            continue;
+        }
+
+        if (bp.x < 0 || bp.y < 0 || bp.y > height) bossProjectiles.splice(i, 1);
+    }
+
+    for (let i = coins.length - 1; i >= 0; i--) {
+        let c = coins[i];
+        
+        if (hasMagnet) {
+            let pCenterX = playerX + playerWidth / 2;
+            let pCenterY = playerY - playerHeight / 2;
+            let dx = pCenterX - c.x;
+            let dy = pCenterY - c.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 180) { 
+                c.x += (dx / dist) * 7;
+                c.y += (dy / dist) * 7;
+            } else {
+                c.x -= gameSpeed;
+            }
+        } else {
+            c.x -= gameSpeed;
+        }
+
+        let pTop = playerY - playerHeight;
+        if (c.x > playerX && c.x < playerX + playerWidth && c.y > pTop && c.y < playerY) {
+            if (c.type === "blue") {
+                score += 1000; 
+            } else {
+                savedGold += 250; 
+            }
+            coins.splice(i, 1);
+            continue;
+        }
+
+        if (c.x < -20) coins.splice(i, 1);
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        
+        if (obs.type === "pink_monster") {
+            obs.x += obs.vx;
+        } else {
+            obs.x -= gameSpeed;
+        }
+
+        if (obs.type === "purple_monster") {
+            obs.jumpTimer++;
+            if (obs.jumpTimer % 50 < 25) {
+                obs.y = groundY - 30 - Math.sin((obs.jumpTimer % 25) / 25 * Math.PI) * 45;
+            } else {
+                obs.y = groundY - 30;
+            }
+        }
+
+        if (obs.type === "falling" && !obs.isFalling && obs.x - playerX < 250) {
+            obs.isFalling = true;
+        }
+        if (obs.isFalling && obs.y < groundY - obs.height) {
+            obs.y += 8;
+            if (obs.y > groundY - obs.height) obs.y = groundY - obs.height;
+        }
+
+        let obsY = obs.y;
+        let pTop = playerY - playerHeight;
+
+        if (obs.x < playerX + playerWidth && obs.x + obs.width > playerX &&
+            obsY < playerY && obsY + obs.height > pTop) {
+            
+            if (obs.type === "purple_monster" && isJumping && jumpVelocity > 0 && (playerY - jumpVelocity) <= obsY + 10) {
+                score += 400; 
+                playerY = obsY;
+                jumpVelocity = -6; 
+                createParticles(obs.x + obs.width/2, obsY + obs.height/2, "#a020f0");
+                obstacles.splice(i, 1);
+                continue;
+            }
+
+            if (shieldCount > 0) {
+                shieldCount--;
+                createParticles(playerX + 15, playerY - 20, "#00ffff");
+                obstacles.splice(i, 1);
+            } else {
+                die();
+            }
+        }
+
+        if (obs.x < -50) obstacles.splice(i, 1);
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.02;
+        if (p.alpha <= 0) particles.splice(i, 1);
+    }
+}
+
+function draw() {
+    ctx.fillStyle = "#281414";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#113f11";
+    ctx.fillRect(0, groundY, width, height - groundY);
+    ctx.fillStyle = "#00ff00";
+    ctx.fillRect(0, groundY, width, 4);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 15px 'Segoe UI', sans-serif";
+    ctx.fillText(`✨ LEVEL: ${currentLevel} / 20`, 20, 30);
+    ctx.fillText(`🎮 XP: ${score}  (Top: ${Math.max(highScore, score)})`, 200, 30);
+    ctx.fillStyle = "#ffd700";
+    ctx.fillText(`🪙 Goud: ${savedGold}`, 450, 30);
+
+    ctx.fillStyle = "#00ffff";
+    let shieldText = "🛡️ Schilden: ";
+    if (shieldCount === 0) shieldText += "Geen";
+    for(let s=0; s<shieldCount; s++) shieldText += "🔵 ";
+    ctx.fillText(shieldText, 590, 30);
+
+    particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    coins.forEach(c => {
+        ctx.fillStyle = c.type === "blue" ? "#00bfff" : "#ffd700";
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(c.x - 2, c.y - 2, c.radius - 5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    obstacles.forEach(obs => {
+        if (obs.type === "purple_monster") {
+            ctx.fillStyle = "#9400d3"; 
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(obs.x + 5, obs.y + 8, 5, 5);
+            ctx.fillRect(obs.x + 15, obs.y + 8, 5, 5);
+        } else if (obs.type === "pink_monster") {
+            ctx.fillStyle = "#ff69b4"; 
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(obs.x + 4, obs.y + 8, 5, 5);
+            ctx.fillRect(obs.x + 14, obs.y + 8, 5, 5);
+        } else if (obs.type === "falling") {
+            ctx.fillStyle = "#ff8c00"; 
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        } else if (obs.type === "yellow_hoog") {
+            ctx.fillStyle = "#ffcc00"; 
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        } else {
+            ctx.fillStyle = "#00ffff";
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        }
+    });
+
+    ctx.fillStyle = "#00fffa";
+    playerProjectiles.forEach(p => {
+        ctx.fillRect(p.x, p.y, 10, 4);
+    });
+
+    ctx.fillStyle = "#ff3333";
+    bossProjectiles.forEach(bp => {
+        ctx.beginPath();
+        ctx.arc(bp.x, bp.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    if (boss.active) {
+        ctx.fillStyle = boss.isSuper ? "#8b0000" : "#ff0000"; 
+        ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+        
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(boss.x + 15, boss.y + 25, 12, 12);
+        ctx.fillRect(boss.x + 45, boss.y + 25, 12, 12);
+
+        let barWidth = boss.width;
+        let hpRatio = boss.hp / boss.maxHp;
+        ctx.fillStyle = "#333";
+        ctx.fillRect(boss.x, boss.y - 15, barWidth, 6);
+        ctx.fillStyle = "#00ff00";
+        ctx.fillRect(boss.x, boss.y - 15, barWidth * hpRatio, 6);
+    }
+
+    if (playerStatus === "levend") {
+        let pTop = playerY - playerHeight;
+        ctx.fillStyle = "#00ff55"; 
+        ctx.fillRect(playerX, pTop, playerWidth, playerHeight);
+
+        ctx.fillStyle = "#000000";
+        if (isCrouching) {
+            ctx.fillRect(playerX + 8, pTop + 6, 5, 5);
+            ctx.fillRect(playerX + 20, pTop + 6, 5, 5);
+        } else {
+            ctx.fillRect(playerX + 8, pTop + 10, 5, 5);
+            ctx.fillRect(playerX + 20, pTop + 10, 5, 5);
+        }
+
+        for (let s = 0; s < shieldCount; s++) {
+            ctx.strokeStyle = `rgba(0, 255, 255, ${0.8 - s * 0.2})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(playerX + playerWidth/2, playerY - playerHeight/2, 28 + s * 6, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+
+    if (isPaused && playerStatus === "levend") {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "bold 40px 'Segoe UI', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText("⏸ PAUZE", width / 2, height / 2);
+        ctx.font = "16px 'Segoe UI', sans-serif";
+        ctx.fillText("Druk op P of tik op het scherm om verder te gaan", width / 2, height / 2 + 30);
+        ctx.textAlign = 'left';
+    }
+
+    if (playerStatus === "dood") {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+        ctx.fillRect(0, 0, width, height);
+        
+        ctx.fillStyle = '#ff3333';
+        ctx.font = "bold 50px 'Segoe UI', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText("OOPS!", width / 2, height / 2 - 30);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "16px 'Segoe UI', sans-serif";
+        ctx.fillText("Je bent helaas afgegaan.", width / 2, height / 2 + 10);
+        ctx.fillText("Druk op 'Enter', tik op het scherm of klik op de groene knop om te herrijzen.", width / 2, height / 2 + 35);
+        ctx.fillText("🎁 Bezoek de winkel hieronder om upgrades te kopen met je goud!", width / 2, height / 2 + 75);
+        ctx.textAlign = 'left';
+    }
+}
+
+// Vaste 60 updates per seconde, ongeacht de schermfrequentie (60/120/144 Hz)
+const STEP = 1000 / 60;
+let lastTime = performance.now();
+let accumulator = 0;
+
+function gameLoop(now) {
+    accumulator += Math.min(now - lastTime, 250);
+    lastTime = now;
+    while (accumulator >= STEP) {
+        update();
+        accumulator -= STEP;
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+loadProgress();
+updateShopButtons();
+requestAnimationFrame(gameLoop);
+</script>
+
+</body>
+</html>
